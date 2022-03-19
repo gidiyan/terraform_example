@@ -31,5 +31,5 @@ variable "location" {
 variable "object_id" {
   type        = string
   description = "Account ID"
-  default     = "2d71b350-9a06-4c8d-98cc-86dbcb0bcbfb"
+  default     = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 }
