@@ -1,0 +1,66 @@
+image: registry.gitlab.com/gitlab-org/terraform-images/stable:latest
+variables:
+  TF_ROOT: ${CI_PROJECT_DIR}
+  TF_ADDRESS: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${CI_PROJECT_NAME}
+
+cache:
+  key: example-production
+  paths:
+    - ${TF_ROOT}/.terraform
+
+before_script:
+  - export ARM_CLIENT_ID="${client_id}"
+  - export ARM_CLIENT_SECRET="${client_secret}"
+  - export ARM_TENANT_ID="${tenant_id}"
+  - export ARM_SUBSCRIPTION_ID="${subscription_id}"
+  - cd ${TF_ROOT}
+  - rm -rf .terraform
+  - gitlab-terraform --version
+  - mkdir -p ./creds
+  - echo $SERVICEACCOUNT | base64 -d > ./creds/serviceaccount.json
+  - git config --global url."https://oauth2:${GITLAB_TOKEN}@gitlab.com".insteadOf https://gitlab.com
+  - gitlab-terraform get
+  - gitlab-terraform init
+
+stages:
+  - validate
+  - plan
+  - apply
+  - destroy
+
+validate:
+  stage: validate
+  script:
+    - gitlab-terraform validate
+
+plan:
+  stage: plan
+  script:
+    - gitlab-terraform plan
+    - gitlab-terraform plan-json
+  dependencies:
+    - validate
+  artifacts:
+    name: plan
+    paths:
+      - ${TF_ROOT}/plan.cache
+    reports:
+      terraform: ${TF_ROOT}/plan.json
+
+
+
+apply:
+  stage: apply
+  script:
+    - gitlab-terraform apply
+  dependencies:
+    - plan
+  when: manual
+
+destroy:
+  stage: destroy
+  script:
+    - gitlab-terraform destroy
+  dependencies:
+    - plan
+  when: manual
